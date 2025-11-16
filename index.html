@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI证件照（示范） / AI ID Photo (Demo)</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- jsPDF 用于生成 PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/logo.png" alt="logo" id="logo" style="height:36px;display:none;">
+      <h1 id="title">AI证件照示范</h1>
+    </div>
+    <div class="lang">
+      <select id="langSelect" aria-label="Language select">
+        <option value="zh">中文</option>
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="left">
+      <h2 id="headline">自拍上传，3 分钟生成证件照</h2>
+      <p id="subtitle">展示用演示版 — 无需安装、可直接下载证件照 PDF</p>
+
+      <div class="card">
+        <label id="uploadLabel" class="btn">
+          <input id="fileInput" type="file" accept="image/*" />
+          <span id="uploadText">上传自拍照片 / Upload Photo</span>
+        </label>
+
+        <div class="controls">
+          <label for="sizeSelect" id="sizeLabel">选择尺寸 / サイズ / Size</label>
+          <select id="sizeSelect">
+            <option value="30x40">30×40 mm (履歴書)</option>
+            <option value="35x45">35×45 mm (Passport)</option>
+            <option value="40x50">40×50 mm</option>
+          </select>
+
+          <label for="bgSelect" id="bgLabel">背景色 / 背景色 / Background</label>
+          <select id="bgSelect">
+            <option value="#ffffff">白 / White</option>
+            <option value="#e6f0ff">蓝 / Blue</option>
+            <option value="#f0f0f0">灰 / Gray</option>
+          </select>
+
+          <button id="processBtn" class="btn primary">生成预览 / Generate</button>
+        </div>
+      </div>
+
+      <div class="card small">
+        <h3 id="resultTitle">生成结果 / Result</h3>
+        <p id="resultDesc">确认后可生成 PDF 并获取打印提取码（演示用）</p>
+        <button id="downloadBtn" class="btn" disabled>下载 PDF / Download PDF</button>
+        <button id="codeBtn" class="btn" disabled>生成打印提取码 / Generate Print Code</button>
+        <div id="printCodeArea" class="printCode" aria-hidden="true"></div>
+      </div>
+
+      <div class="card hint" id="explain">
+        <h4 id="howItWorksTitle">如何工作（演示版）</h4>
+        <ol id="howItWorks">
+          <li>上传自拍 → 我们在浏览器里裁剪并更换背景（用于演示）。</li>
+          <li>点击「生成」，页面将产生可打印的证件照 PDF。</li>
+          <li>真实服务时会在服务器端调用 remove.bg / PhotoRoom API 以获得更准确效果。</li>
+        </ol>
+      </div>
+    </section>
+
+    <aside class="right">
+      <div class="previewCard">
+        <h3 id="previewTitle">预览 / Preview</h3>
+        <div id="previewWrapper">
+          <canvas id="previewCanvas"></canvas>
+        </div>
+        <div id="sizeNote" class="sizeNote">尺寸：30×40 mm (默认)</div>
+      </div>
+
+      <div class="infoCard">
+        <h4 id="whyTitle">给投资人看的关键点</h4>
+        <ul id="whyList">
+          <li>无需线下设备：用户用手机即可上传并在便利店打印</li>
+          <li>轻资产：仅需要软件与打印渠道对接</li>
+          <li>扩展性：支持多语言、证件类型与 B2B 合作</li>
+        </ul>
+      </div>
+
+      <div class="contactCard">
+        <h4 id="contactTitle">联系 / Contact</h4>
+        <p id="contactInfo">email@example.com</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <small id="footerText">演示仅供展示用途。若需对接真实打印系统与AI，请参考 README。</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

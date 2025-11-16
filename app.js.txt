@@ -1,0 +1,220 @@
+// app.js
+// 简单的 front-end-only 演示：上传图片 -> 在 canvas 裁剪并更换背景 -> 生成可下载 PDF -> 生成打印码（随机）
+// 多语言文案
+const texts = {
+  zh: {
+    title: "AI证件照示范",
+    headline: "自拍上传，3 分钟生成证件照",
+    subtitle: "展示用演示版 — 无需后台，生成可下载 PDF",
+    uploadText: "上传自拍照片 / Upload Photo",
+    processBtn: "生成预览 / Generate",
+    downloadBtn: "下载 PDF / Download PDF",
+    codeBtn: "生成打印提取码 / Generate Print Code",
+    howItWorksTitle: "如何工作（演示版）",
+    resultTitle: "生成结果 / Result",
+    contactTitle: "联系 / Contact",
+    footer: "演示仅供展示用途。若需对接真实打印系统与AI，请参考 README。"
+  },
+  ja: {
+    title: "AI証明写真デモ",
+    headline: "自撮りアップで、3分で証明写真",
+    subtitle: "デモ版 — サーバ不要、PDF出力可",
+    uploadText: "写真をアップロード / Upload Photo",
+    processBtn: "プレビュー生成 / Generate",
+    downloadBtn: "PDFダウンロード / Download PDF",
+    codeBtn: "印刷コード作成 / Generate Print Code",
+    howItWorksTitle: "動作説明（デモ）",
+    resultTitle: "生成結果 / Result",
+    contactTitle: "連絡先 / Contact",
+    footer: "このデモは展示用です。本番はサーバ連携でAI処理を行います。"
+  },
+  en: {
+    title: "AI ID Photo Demo",
+    headline: "Upload selfie — get ID photo in 3 min",
+    subtitle: "Demo (no backend) — produces printable PDF",
+    uploadText: "Upload Photo",
+    processBtn: "Generate Preview",
+    downloadBtn: "Download PDF",
+    codeBtn: "Generate Print Code",
+    howItWorksTitle: "How it works (demo)",
+    resultTitle: "Result",
+    contactTitle: "Contact",
+    footer: "Demo for presentation. For production integrate server-side AI APIs."
+  }
+};
+
+let lang = "zh";
+
+const el = id => document.getElementById(id);
+const fileInput = el('fileInput');
+const previewCanvas = el('previewCanvas');
+const ctx = previewCanvas.getContext('2d');
+const processBtn = el('processBtn');
+const downloadBtn = el('downloadBtn');
+const codeBtn = el('codeBtn');
+const printCodeArea = el('printCodeArea');
+const sizeSelect = el('sizeSelect');
+const bgSelect = el('bgSelect');
+const langSelect = el('langSelect');
+
+let currentImage = null;
+let lastResultBlob = null;
+let dpi = 300; // 高质量打印用 DPI
+
+function setTexts() {
+  const t = texts[lang];
+  el('title').innerText = t.title;
+  el('headline').innerText = t.headline;
+  el('subtitle').innerText = t.subtitle;
+  el('uploadText').innerText = t.uploadText;
+  el('processBtn').innerText = t.processBtn;
+  el('downloadBtn').innerText = t.downloadBtn;
+  el('codeBtn').innerText = t.codeBtn;
+  el('howItWorksTitle').innerText = t.howItWorksTitle;
+  el('resultTitle').innerText = t.resultTitle;
+  el('contactTitle').innerText = t.contactTitle;
+  el('footerText').innerText = t.footer;
+}
+setTexts();
+
+langSelect.addEventListener('change', (e) => {
+  lang = e.target.value;
+  setTexts();
+});
+
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    currentImage = img;
+    drawPreview(); // 当选择图片后自动绘制预览
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+function parseSize(sizeStr){
+  // 返回毫米宽高
+  const [w,h] = sizeStr.split('x').map(Number);
+  return {w, h};
+}
+
+function mmToPx(mm, dpi=300){
+  // mm -> px (approx)
+  return Math.round((mm/25.4) * dpi);
+}
+
+function drawPreview(){
+  if(!currentImage){
+    // 清空画面
+    previewCanvas.width = 360;
+    previewCanvas.height = 480;
+    ctx.fillStyle = "#efefef";
+    ctx.fillRect(0,0,previewCanvas.width, previewCanvas.height);
+    return;
+  }
+  // 根据选的尺寸，生成对应像素预览（以 300dpi 为基础）
+  const size = parseSize(sizeSelect.value); // mm
+  const pxW = mmToPx(size.w, 150); // 缩小预览分辨率（150dpi 预览用）
+  const pxH = mmToPx(size.h, 150);
+
+  previewCanvas.width = Math.min(360, pxW);
+  previewCanvas.height = Math.min(480, pxH);
+
+  // 背景
+  ctx.fillStyle = bgSelect.value || '#fff';
+  ctx.fillRect(0,0,previewCanvas.width, previewCanvas.height);
+
+  // 人像裁剪：我们把图片中间区域作为头像，保持人脸在中间（演示用）
+  const sx = Math.max(0, (currentImage.width - currentImage.height)/2);
+  const sy = 0;
+  const sSize = Math.min(currentImage.width, currentImage.height);
+  // drawImage( img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight )
+  ctx.drawImage(currentImage, sx, sy, sSize, sSize, 0, 0, previewCanvas.width, previewCanvas.height);
+}
+
+// 点击生成
+processBtn.addEventListener('click', async () => {
+  if(!currentImage){
+    alert(lang === 'ja' ? '画像をアップロードしてください' : (lang==='en' ? 'Please upload a photo' : '请先上传照片'));
+    return;
+  }
+  drawPreview();
+  // 为了演示“AI处理”，我们使用画布融合背景并生成高分辨率图像作为结果
+  // 生成高分辨率 canvas（300dpi）
+  const size = parseSize(sizeSelect.value);
+  const outW = mmToPx(size.w, dpi);
+  const outH = mmToPx(size.h, dpi);
+  const off = document.createElement('canvas');
+  off.width = outW;
+  off.height = outH;
+  const octx = off.getContext('2d');
+
+  // 背景
+  octx.fillStyle = bgSelect.value || '#fff';
+  octx.fillRect(0,0,outW,outH);
+
+  // 裁剪人像（同上）
+  const sX = Math.max(0, (currentImage.width - currentImage.height)/2);
+  const sSize = Math.min(currentImage.width, currentImage.height);
+  octx.drawImage(currentImage, sX, 0, sSize, sSize, 0, 0, outW, outH);
+
+  // 可以在此处做更多“演示效果”，例如轻微自动增强：
+  // 简单亮度/对比度调整（演示）
+  // (省略复杂处理)
+
+  // 把 off 转为 Blob，供 PDF 生成
+  off.toBlob((blob) => {
+    lastResultBlob = blob;
+    downloadBtn.disabled = false;
+    codeBtn.disabled = false;
+    printCodeArea.style.display = 'none';
+    printCodeArea.innerText = '';
+    alert(lang==='en' ? 'Preview generated. You can download the PDF.' : (lang==='ja' ? 'プレビューを生成しました。PDFをダウンロードできます。' : '已生成预览，可下载 PDF'));
+  }, 'image/jpeg', 0.95);
+});
+
+// 生成 PDF 并下载
+downloadBtn.addEventListener('click', async () => {
+  if(!lastResultBlob){
+    alert('No result');
+    return;
+  }
+  // 使用 jsPDF（mm 单位），把图片放入 PDF 的适当尺寸以便打印
+  const { jsPDF } = window.jspdf;
+  const size = parseSize(sizeSelect.value);
+  // pdf page size set to A4 for convenience
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  // 计算图片将被放置在页上中央（以 mm 为单位）
+  // 注意：jsPDF addImage 需要 dataURL
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const dataUrl = e.target.result;
+    // 将证件照放在页面靠顶并居中
+    const imgWmm = size.w;
+    const imgHmm = size.h;
+    const pageW = pdf.internal.pageSize.getWidth();
+    // 放在页面中央稍靠上
+    const x = (pageW - imgWmm)/2;
+    const y = 30;
+    pdf.addImage(dataUrl, 'JPEG', x, y, imgWmm, imgHmm);
+    // 保存
+    const filename = `idphoto_${Date.now()}.pdf`;
+    pdf.save(filename);
+  };
+  reader.readAsDataURL(lastResultBlob);
+});
+
+// 生成“打印提取码”演示（随机8位）
+codeBtn.addEventListener('click', () => {
+  const code = Math.floor(10000000 + Math.random() * 90000000).toString();
+  printCodeArea.style.display = 'block';
+  printCodeArea.innerText = (lang==='en' ? 'Print code (demo): ' : (lang==='ja' ? '印刷コード（デモ）：' : '打印提取码（演示）：')) + code;
+  // 模拟把 code 上传到服务器后可在便利店输入打印（演示）
+});
+
+// Canvas 点击也可重绘（可选）
+previewCanvas.addEventListener('click', drawPreview);
+
+// 初始占位
+drawPreview();
